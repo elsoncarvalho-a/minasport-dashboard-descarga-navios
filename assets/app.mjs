@@ -13,6 +13,9 @@ import {
 } from "./dashboard-core.mjs?v=9";
 
 const DEFAULT_WORKBOOK = "./data/Torre_Controle_Produtividade_Descarga_Navios.xlsx";
+const CACHE_DATABASE = "minasport-dashboard-cache";
+const CACHE_STORE = "workbooks";
+const CACHE_KEY = "last-uploaded-workbook";
 const state = {
   rowsBySheet: null,
   operations: [],
@@ -44,6 +47,84 @@ const elements = {
 };
 
 const decimal = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const timestamp = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
+function openWorkbookCache() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      resolve(null);
+      return;
+    }
+    const request = window.indexedDB.open(CACHE_DATABASE, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(CACHE_STORE)) {
+        request.result.createObjectStore(CACHE_STORE, { keyPath: "id" });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("Não foi possível abrir o armazenamento local."));
+    request.onblocked = () => reject(new Error("O armazenamento local está bloqueado por outra aba."));
+  });
+}
+
+async function saveCachedWorkbook(buffer, fileName) {
+  const database = await openWorkbookCache();
+  if (!database) return null;
+  const savedAt = Date.now();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(CACHE_STORE, "readwrite");
+    transaction.objectStore(CACHE_STORE).put({
+      id: CACHE_KEY,
+      fileName,
+      savedAt,
+      buffer,
+    });
+    transaction.oncomplete = () => {
+      database.close();
+      resolve(savedAt);
+    };
+    transaction.onerror = () => {
+      database.close();
+      reject(transaction.error || new Error("Não foi possível salvar a planilha neste navegador."));
+    };
+    transaction.onabort = transaction.onerror;
+  });
+}
+
+async function readCachedWorkbook() {
+  const database = await openWorkbookCache();
+  if (!database) return null;
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(CACHE_STORE, "readonly");
+    const request = transaction.objectStore(CACHE_STORE).get(CACHE_KEY);
+    request.onsuccess = () => {
+      database.close();
+      resolve(request.result || null);
+    };
+    request.onerror = () => {
+      database.close();
+      reject(request.error || new Error("Não foi possível recuperar a planilha salva."));
+    };
+  });
+}
+
+async function clearCachedWorkbook() {
+  const database = await openWorkbookCache();
+  if (!database) return;
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(CACHE_STORE, "readwrite");
+    transaction.objectStore(CACHE_STORE).delete(CACHE_KEY);
+    transaction.oncomplete = () => {
+      database.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      database.close();
+      reject(transaction.error || new Error("Não foi possível remover a planilha salva."));
+    };
+    transaction.onabort = transaction.onerror;
+  });
+}
 
 function setText(id, value) {
   const element = document.getElementById(id);
@@ -562,7 +643,7 @@ function rowsFromWorkbook(workbook) {
   return rowsBySheet;
 }
 
-async function loadBuffer(buffer, fileName, source) {
+async function loadBuffer(buffer, fileName, source, updatedAt = Date.now()) {
   if (!window.XLSX) throw new Error("O leitor de Excel não foi carregado.");
   setLoading(true, "Processando a planilha…");
   try {
@@ -578,7 +659,7 @@ async function loadBuffer(buffer, fileName, source) {
     populateSelectors(preferredOperation(rowsBySheet, operations));
     renderSelectedOperation();
     elements.sourceLine.textContent = `${source}: ${fileName}`;
-    elements.dataState.textContent = `Atualizado em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date())}`;
+    elements.dataState.textContent = `Atualizado em ${timestamp.format(new Date(updatedAt))}`;
     elements.restoreButton.hidden = source === "Base do repositório";
     showToast("Indicadores atualizados com sucesso.");
   } finally {
@@ -596,6 +677,39 @@ async function loadDefaultWorkbook() {
     showError(`${error.message} Use “Atualizar dados” para selecionar a planilha manualmente.`);
   } finally {
     setLoading(false);
+  }
+}
+
+async function loadInitialWorkbook() {
+  try {
+    const cachedWorkbook = await readCachedWorkbook();
+    if (cachedWorkbook?.buffer) {
+      await loadBuffer(
+        cachedWorkbook.buffer,
+        cachedWorkbook.fileName || "Planilha salva.xlsx",
+        "Base salva neste navegador",
+        cachedWorkbook.savedAt,
+      );
+      showToast("Última planilha salva restaurada automaticamente.");
+      return;
+    }
+  } catch (error) {
+    try {
+      await clearCachedWorkbook();
+    } catch {
+      // A base do repositório ainda pode ser utilizada mesmo sem armazenamento local.
+    }
+  }
+  await loadDefaultWorkbook();
+}
+
+async function restoreDefaultWorkbook() {
+  try {
+    await clearCachedWorkbook();
+    await loadDefaultWorkbook();
+    showToast("Cópia local removida. Base do repositório restaurada.");
+  } catch (error) {
+    showError(error.message);
   }
 }
 
@@ -637,7 +751,18 @@ elements.fileInput.addEventListener("change", async (event) => {
   const [file] = event.target.files;
   if (!file) return;
   try {
-    await loadBuffer(await file.arrayBuffer(), file.name, "Arquivo local");
+    const buffer = await file.arrayBuffer();
+    await loadBuffer(buffer, file.name, "Arquivo local");
+    const savedAt = await saveCachedWorkbook(buffer, file.name);
+    if (savedAt) {
+      state.source = "Base salva neste navegador";
+      elements.sourceLine.textContent = `${state.source}: ${file.name}`;
+      elements.dataState.textContent = `Atualizado em ${timestamp.format(new Date(savedAt))}`;
+      elements.restoreButton.hidden = false;
+      showToast("Planilha atualizada e salva neste navegador.");
+    } else {
+      showToast("Planilha atualizada apenas nesta sessão; o navegador não oferece armazenamento local.");
+    }
   } catch (error) {
     showError(error.message);
   } finally {
@@ -645,7 +770,7 @@ elements.fileInput.addEventListener("change", async (event) => {
   }
 });
 
-elements.restoreButton.addEventListener("click", loadDefaultWorkbook);
+elements.restoreButton.addEventListener("click", restoreDefaultWorkbook);
 elements.pdfButton.addEventListener("click", exportPdf);
 
 window.addEventListener("error", (event) => {
@@ -653,4 +778,4 @@ window.addEventListener("error", (event) => {
   showError(`Falha inesperada ao montar o painel: ${event.message}`);
 });
 
-loadDefaultWorkbook();
+loadInitialWorkbook();

@@ -7,8 +7,9 @@ Dashboard web estático para acompanhamento executivo e analítico da produtivid
 1. Abra o site publicado no GitHub Pages.
 2. Selecione o **navio** e, em seguida, a **operação** correspondente.
 3. Para analisar uma atualização sem publicar o arquivo, clique em **Atualizar dados** e escolha o Excel local. O processamento ocorre somente no navegador.
-4. Para atualizar a base padrão do site, substitua o arquivo `data/Torre_Controle_Produtividade_Descarga_Navios.xlsx` no repositório e faça um novo commit.
-5. Clique em **Baixar PDF** para gerar o relatório completo da operação selecionada.
+4. A última planilha selecionada fica salva automaticamente nesse navegador e será restaurada nas próximas visitas. Clique em **Usar base padrão** para apagar a cópia local.
+5. Para disponibilizar a mesma atualização a todos os usuários, substitua o arquivo `data/Torre_Controle_Produtividade_Descarga_Navios.xlsx` no repositório e faça um novo commit.
+6. Clique em **Baixar PDF** para gerar o relatório completo da operação selecionada.
 
 ## Indicadores disponíveis
 
