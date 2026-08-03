@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#020904" />
+    <meta
+      name="description"
+      content="Dashboard executivo para acompanhamento da produtividade de descarga de navios."
+    />
+    <title>Torre de Controle | Descarga de Navios</title>
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Ir para os indicadores</a>
+
+    <div class="dashboard-app" aria-busy="true">
+      <header class="utility-bar" aria-label="Controles do painel">
+        <div class="brand-lockup">
+          <img class="brand-logo" src="./assets/logo-grupo-minas-port.jpg" alt="Grupo Minas Port - Soluções Integradas" />
+        </div>
+
+        <div class="data-controls">
+          <label class="field-control vessel-control" for="vessel-select">
+            <span>Navio</span>
+            <select id="vessel-select" disabled aria-label="Selecionar navio"></select>
+          </label>
+
+          <label class="field-control" for="operation-select">
+            <span>Operação</span>
+            <select id="operation-select" disabled aria-label="Selecionar operação"></select>
+          </label>
+
+          <label class="upload-button" for="file-input">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
+              <path d="M12 16V4m0 0-4 4m4-4 4 4M5 15v4h14v-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Atualizar dados
+          </label>
+          <input id="file-input" type="file" accept=".xlsx,.xls,.xlsm" />
+
+          <button id="restore-button" class="secondary-button" type="button" hidden>
+            Usar base padrão
+          </button>
+
+          <button id="pdf-button" class="pdf-button" type="button">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
+              <path d="M7 3h7l4 4v14H7zM14 3v5h4M9.5 14h5M9.5 17h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Baixar PDF
+          </button>
+        </div>
+
+        <div class="source-status" aria-live="polite">
+          <strong id="source-line">Base do repositório</strong>
+          <span id="data-state">Carregando dados…</span>
+        </div>
+      </header>
+
+      <div id="error-box" class="error-box" role="alert" hidden></div>
+
+      <div id="pdf-report">
+      <main id="main-content">
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-copy">
+            <p id="eyebrow" class="eyebrow">TORRE DE CONTROLE | DESCARGA DE NAVIOS</p>
+            <h1 id="hero-title">Carregando operação…</h1>
+            <p id="hero-meta" class="hero-meta">Aguarde enquanto os indicadores são calculados.</p>
+          </div>
+          <div class="hero-aside">
+            <img class="report-logo" src="./assets/logo-grupo-minas-port.jpg" alt="Grupo Minas Port - Soluções Integradas" />
+            <div id="status-badge" class="status-badge" data-tone="warning">
+              <span class="status-dot" aria-hidden="true"></span>
+              <strong id="status-text">STATUS: CARREGANDO</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="kpi-grid" aria-label="Indicadores executivos">
+          <article class="kpi-card">
+            <p>Volume descarregado</p>
+            <strong id="kpi-volume">—</strong>
+            <span id="kpi-volume-detail" class="metric-detail">—</span>
+          </article>
+          <article class="kpi-card">
+            <p>Fechamento da operação</p>
+            <strong id="kpi-closing">—</strong>
+            <span id="kpi-closing-detail" class="metric-detail">—</span>
+          </article>
+          <article class="kpi-card">
+            <p>Produtividade</p>
+            <strong id="kpi-productivity">—</strong>
+            <span id="kpi-productivity-detail" class="metric-detail">—</span>
+          </article>
+          <article class="kpi-card">
+            <p>Prancha média (24h)</p>
+            <strong id="kpi-daily">—</strong>
+            <span id="kpi-daily-detail" class="metric-detail">—</span>
+          </article>
+          <article class="kpi-card">
+            <p>Horas trabalhadas</p>
+            <strong id="kpi-worked">—</strong>
+            <small id="kpi-window">JANELA TOTAL: —</small>
+            <span id="kpi-worked-detail" class="metric-detail compact">—</span>
+          </article>
+          <article class="kpi-card">
+            <p>Eficiência operacional</p>
+            <strong id="kpi-efficiency">—</strong>
+            <span id="kpi-efficiency-detail" class="metric-detail">—</span>
+          </article>
+        </section>
+
+        <section class="content-grid" aria-label="Detalhamento operacional">
+          <article class="panel holds-panel">
+            <header class="panel-heading">
+              <div>
+                <h2>Progresso por porão</h2>
+                <p>Descarregado vs. manifestado, com produtividade média</p>
+              </div>
+              <span id="period-line" class="panel-meta">—</span>
+            </header>
+            <div id="holds-list" class="holds-list"></div>
+          </article>
+
+          <div class="right-column">
+            <article class="panel shifts-panel">
+              <header class="panel-heading">
+                <div>
+                  <h2>Desempenho por turno</h2>
+                  <p>Volume e produtividade por horas efetivas</p>
+                </div>
+              </header>
+              <div id="shifts-list" class="shifts-list"></div>
+            </article>
+
+            <article class="panel stops-panel">
+              <header class="panel-heading">
+                <div>
+                  <h2>Paradas e leitura executiva</h2>
+                  <p>Principais perdas de tempo por categoria</p>
+                </div>
+              </header>
+              <div id="stops-list" class="stops-list"></div>
+              <p id="executive-reading" class="executive-reading">—</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="analytics-section" aria-labelledby="analytics-title">
+          <header class="section-heading">
+            <div>
+              <p class="section-kicker">VISÃO ANALÍTICA COMPLETA</p>
+              <h2 id="analytics-title">Indicadores extraídos da base operacional</h2>
+            </div>
+            <p>Metas, tempos, volumes, fluxos, produtividade e perdas recalculados para a operação selecionada.</p>
+          </header>
+
+          <article class="panel operation-profile pdf-keep">
+            <header class="panel-heading">
+              <div>
+                <h2>Perfil da operação</h2>
+                <p>Cadastro do navio e marcos da escala</p>
+              </div>
+            </header>
+            <dl id="operation-profile" class="profile-grid"></dl>
+          </article>
+
+          <div id="secondary-kpis" class="secondary-kpi-grid" aria-label="Indicadores complementares"></div>
+
+          <div class="analytics-grid">
+            <article class="panel flow-panel pdf-keep">
+              <header class="panel-heading">
+                <div>
+                  <h2>Composição do volume</h2>
+                  <p>Movimentação via terminal e descarga direta</p>
+                </div>
+              </header>
+              <div class="flow-content">
+                <div id="flow-donut" class="flow-donut" role="img" aria-label="Composição do volume por fluxo">
+                  <div>
+                    <strong id="flow-total">—</strong>
+                    <span>Total</span>
+                  </div>
+                </div>
+                <div id="flow-legend" class="flow-legend"></div>
+              </div>
+            </article>
+
+            <article class="panel daily-panel pdf-keep">
+              <header class="panel-heading">
+                <div>
+                  <h2>Evolução diária</h2>
+                  <p>Volume, produtividade e eficiência por data</p>
+                </div>
+              </header>
+              <div id="daily-chart" class="daily-chart"></div>
+            </article>
+          </div>
+
+          <div class="tables-grid">
+            <article class="panel table-panel pdf-keep">
+              <header class="panel-heading">
+                <div>
+                  <h2>Detalhamento por porão</h2>
+                  <p>Volume, saldo, tempo e produtividade</p>
+                </div>
+              </header>
+              <div class="table-scroll"><table id="holds-table" class="data-table"></table></div>
+            </article>
+
+            <article class="panel table-panel pdf-keep">
+              <header class="panel-heading">
+                <div>
+                  <h2>Detalhamento por turno</h2>
+                  <p>Participação, eficiência e produtividade</p>
+                </div>
+              </header>
+              <div class="table-scroll"><table id="shifts-table" class="data-table"></table></div>
+            </article>
+
+            <article class="panel table-panel pdf-keep">
+              <header class="panel-heading">
+                <div>
+                  <h2>Paradas por categoria</h2>
+                  <p>Ocorrências, duração e participação</p>
+                </div>
+              </header>
+              <div class="table-scroll"><table id="stops-table" class="data-table"></table></div>
+            </article>
+
+            <article class="panel table-panel pdf-keep">
+              <header class="panel-heading">
+                <div>
+                  <h2>Principais motivos</h2>
+                  <p>Concentração das causas de parada</p>
+                </div>
+              </header>
+              <div class="table-scroll"><table id="reasons-table" class="data-table"></table></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="audit-strip" aria-label="Rastreabilidade dos dados">
+          <div>
+            <span class="audit-label">RASTREABILIDADE</span>
+            <strong id="record-line">—</strong>
+          </div>
+          <span>Os cálculos são refeitos a partir das abas operacionais, sem envio do arquivo.</span>
+        </section>
+      </main>
+
+      <footer class="page-footer">
+        <span>Fonte: planilha Torre de Controle de Produtividade de Descarga de Navios</span>
+        <span id="footer-date">—</span>
+      </footer>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <noscript>
+      <div class="noscript-message">Este painel precisa de JavaScript para ler e calcular os indicadores da planilha.</div>
+    </noscript>
+
+    <script src="./vendor/xlsx.full.min.js"></script>
+    <script src="./vendor/html2canvas.min.js"></script>
+    <script src="./vendor/jspdf.umd.min.js"></script>
+    <script type="module" src="./assets/app.mjs?v=8"></script>
+  </body>
+</html>
