@@ -10,7 +10,7 @@ import {
   operationCatalog,
   periodLabel,
   preferredOperation,
-} from "./dashboard-core.mjs";
+} from "./dashboard-core.mjs?v=9";
 
 const DEFAULT_WORKBOOK = "./data/Torre_Controle_Produtividade_Descarga_Navios.xlsx";
 const state = {
@@ -338,7 +338,7 @@ function renderAnalytics(data) {
 function render(data) {
   state.currentData = data;
   setText("eyebrow", "TORRE DE CONTROLE | DESCARGA DE NAVIOS");
-  setText("hero-title", `${data.shipName} | ${data.concluded ? "fechamento final da descarga" : "acompanhamento da descarga"}`);
+  setText("hero-title", `${data.shipName} | ${data.concluded ? "fechamento final da descarga" : "resultado parcial da descarga"}`);
   setText("hero-meta", [
     data.operationId,
     [data.terminal, data.berth].filter(Boolean).join(" / "),

@@ -13,6 +13,7 @@ Dashboard web estático para acompanhamento executivo e analítico da produtivid
 ## Indicadores disponíveis
 
 - Volume manifestado, descarregado, saldo e aderência ao manifesto.
+- Status parcial enquanto o volume descarregado estiver abaixo da carga informada; fechamento somente ao atingir o volume manifestado.
 - Volume direto e via terminal, participação de cada fluxo e produtividade por fluxo.
 - Produtividade média, meta, atingimento e desvio.
 - Prancha média em 24 horas, meta e atingimento.

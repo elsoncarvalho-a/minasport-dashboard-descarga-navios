@@ -249,7 +249,11 @@ export function calculateDashboard(rowsBySheet, selectedOperation) {
   const stoppageRate = divide(stoppedHours, calendarHours);
   const adherence = divide(volume, manifested);
   const ets = value(vessel, "ETS");
-  const concluded = hasValue(ets) || (manifested > 0 && volume >= manifested * 0.995);
+  const targetReached = manifested > 0 && volume + 0.001 >= manifested;
+  // Quando existe uma carga informada, somente o atingimento desse volume
+  // caracteriza o fechamento. A ETS permanece como fallback apenas para
+  // cadastros antigos sem volume manifestado.
+  const concluded = manifested > 0 ? targetReached : hasValue(ets);
   const difference = volume - manifested;
 
   const holdSummaries = [...holds.values()]
@@ -319,7 +323,7 @@ export function calculateDashboard(rowsBySheet, selectedOperation) {
   } else if (concluded) {
     executiveReading = `Descarga concluída com saldo de ${formatTons(Math.abs(difference))} abaixo do manifesto; validar reconciliação final.`;
   } else {
-    executiveReading = `Operação em andamento; restam ${formatTons(Math.max(manifested - volume, 0))} para atingir o volume manifestado.`;
+    executiveReading = `Resultado parcial da descarga; restam ${formatTons(Math.max(manifested - volume, 0))} para atingir o volume manifestado.`;
   }
 
   return {
@@ -335,8 +339,8 @@ export function calculateDashboard(rowsBySheet, selectedOperation) {
     etbDate,
     etsDate,
     concluded,
-    status: concluded ? "CONCLUÍDO" : "EM OPERAÇÃO",
-    closingLabel: concluded ? "CONCLUÍDA" : "EM ANDAMENTO",
+    status: concluded ? "CONCLUÍDO" : "PARCIAL",
+    closingLabel: concluded ? "CONCLUÍDA" : "PARCIAL",
     volume,
     volumeTerminal,
     volumeDireto,
