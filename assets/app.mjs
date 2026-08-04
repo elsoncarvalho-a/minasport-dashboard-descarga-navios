@@ -13,6 +13,8 @@ import {
 } from "./dashboard-core.mjs?v=9";
 
 const DEFAULT_WORKBOOK = "./data/Torre_Controle_Produtividade_Descarga_Navios.xlsx";
+const DEFAULT_WORKBOOK_METADATA = "./data/workbook-meta.json";
+const OFFICIAL_SOURCE = "Base oficial compartilhada";
 const CACHE_DATABASE = "minasport-dashboard-cache";
 const CACHE_STORE = "workbooks";
 const CACHE_KEY = "last-uploaded-workbook";
@@ -657,19 +659,44 @@ async function loadBuffer(buffer, fileName, source, updatedAt = Date.now()) {
     renderSelectedOperation();
     elements.sourceLine.textContent = `${source}: ${fileName}`;
     elements.dataState.textContent = `Atualizado em ${timestamp.format(new Date(updatedAt))}`;
-    elements.restoreButton.hidden = source === "Base do repositório";
+    elements.restoreButton.hidden = source === OFFICIAL_SOURCE;
     showToast("Indicadores atualizados com sucesso.");
   } finally {
     setLoading(false);
   }
 }
 
-async function loadDefaultWorkbook() {
-  setLoading(true, "Carregando a base do repositório…");
+async function loadDefaultWorkbookMetadata() {
+  const fallback = {
+    fileName: "Torre_Controle_Produtividade_Descarga_Navios.xlsx",
+    updatedAt: 0,
+  };
   try {
+    const response = await fetch(`${DEFAULT_WORKBOOK_METADATA}?v=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) return fallback;
+    const metadata = await response.json();
+    const updatedAt = Date.parse(metadata.updatedAt);
+    return {
+      fileName: metadata.fileName || fallback.fileName,
+      updatedAt: Number.isFinite(updatedAt) ? updatedAt : 0,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+async function loadDefaultWorkbook(metadata = null) {
+  setLoading(true, "Carregando a base oficial compartilhada…");
+  try {
+    const officialMetadata = metadata || await loadDefaultWorkbookMetadata();
     const response = await fetch(`${DEFAULT_WORKBOOK}?v=${Date.now()}`, { cache: "no-store" });
     if (!response.ok) throw new Error(`Não foi possível carregar a base padrão (${response.status}).`);
-    await loadBuffer(await response.arrayBuffer(), "Torre_Controle_Produtividade_Descarga_Navios.xlsx", "Base do repositório");
+    await loadBuffer(
+      await response.arrayBuffer(),
+      officialMetadata.fileName,
+      OFFICIAL_SOURCE,
+      officialMetadata.updatedAt || Date.now(),
+    );
   } catch (error) {
     showError(`${error.message} Use “Atualizar dados” para selecionar a planilha manualmente.`);
   } finally {
@@ -678,33 +705,35 @@ async function loadDefaultWorkbook() {
 }
 
 async function loadInitialWorkbook() {
+  const officialMetadata = await loadDefaultWorkbookMetadata();
   try {
     const cachedWorkbook = await readCachedWorkbook();
-    if (cachedWorkbook?.buffer) {
+    if (cachedWorkbook?.buffer && Number(cachedWorkbook.savedAt) > officialMetadata.updatedAt) {
       await loadBuffer(
         cachedWorkbook.buffer,
         cachedWorkbook.fileName || "Planilha salva.xlsx",
-        "Base salva neste navegador",
+        "Base local — somente neste navegador",
         cachedWorkbook.savedAt,
       );
-      showToast("Última planilha salva restaurada automaticamente.");
+      showToast("Planilha local restaurada. Ela é visível somente neste navegador.");
       return;
     }
+    if (cachedWorkbook?.buffer) await clearCachedWorkbook();
   } catch (error) {
     try {
       await clearCachedWorkbook();
     } catch {
-      // A base do repositório ainda pode ser utilizada mesmo sem armazenamento local.
+      // A base oficial ainda pode ser utilizada mesmo sem armazenamento local.
     }
   }
-  await loadDefaultWorkbook();
+  await loadDefaultWorkbook(officialMetadata);
 }
 
 async function restoreDefaultWorkbook() {
   try {
     await clearCachedWorkbook();
     await loadDefaultWorkbook();
-    showToast("Cópia local removida. Base do repositório restaurada.");
+    showToast("Cópia local removida. Base oficial compartilhada restaurada.");
   } catch (error) {
     showError(error.message);
   }
@@ -752,11 +781,11 @@ elements.fileInput.addEventListener("change", async (event) => {
     await loadBuffer(buffer, file.name, "Arquivo local");
     const savedAt = await saveCachedWorkbook(buffer, file.name);
     if (savedAt) {
-      state.source = "Base salva neste navegador";
+      state.source = "Base local — somente neste navegador";
       elements.sourceLine.textContent = `${state.source}: ${file.name}`;
       elements.dataState.textContent = `Atualizado em ${timestamp.format(new Date(savedAt))}`;
       elements.restoreButton.hidden = false;
-      showToast("Planilha atualizada e salva neste navegador.");
+      showToast("Planilha salva somente neste navegador. A base oficial não foi alterada.");
     } else {
       showToast("Planilha atualizada apenas nesta sessão; o navegador não oferece armazenamento local.");
     }
