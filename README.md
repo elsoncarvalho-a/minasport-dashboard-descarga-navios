@@ -11,6 +11,8 @@ Dashboard web estático para acompanhamento executivo e analítico da produtivid
 5. Para disponibilizar a mesma atualização a todos os usuários, substitua o arquivo `data/Torre_Controle_Produtividade_Descarga_Navios.xlsx` no repositório e faça um novo commit.
 6. Clique em **Baixar PDF** para gerar o relatório completo da operação selecionada.
 
+O PDF é dividido em páginas A3 por seções completas: visão executiva, visão analítica e tabelas detalhadas, evitando cortes entre títulos e conteúdos.
+
 ## Indicadores disponíveis
 
 - Volume manifestado, descarregado, saldo e aderência ao manifesto.

@@ -498,8 +498,8 @@ async function exportPdf() {
     const reportRect = report.getBoundingClientRect();
     const sectionOffsets = [
       0,
-      analytics.getBoundingClientRect().top - reportRect.top + 32,
-      tables.getBoundingClientRect().top - reportRect.top + 140,
+      analytics.getBoundingClientRect().top - reportRect.top,
+      tables.getBoundingClientRect().top - reportRect.top,
       report.scrollHeight,
     ];
     const fullCanvas = await window.html2canvas(report, {
@@ -507,13 +507,10 @@ async function exportPdf() {
       backgroundColor: "#020904",
       useCORS: true,
       logging: false,
-      width: report.scrollWidth,
-      height: report.scrollHeight,
       windowWidth: 2100,
-      scrollX: 0,
-      scrollY: 0,
+      windowHeight: report.scrollHeight,
     });
-    const scaleY = 1;
+    const scaleY = fullCanvas.height / report.scrollHeight;
     const canvasBreaks = sectionOffsets.map((offset, index) =>
       index === sectionOffsets.length - 1
         ? fullCanvas.height
