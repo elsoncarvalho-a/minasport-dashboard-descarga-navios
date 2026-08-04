@@ -1,5 +1,8 @@
 # MinasPort - Torre de Controle de Descarga de Navios
 
+> O painel oficial foi migrado para uma base central compartilhada: https://minasport-torre-controle.violet-degu-9975.chatgpt.site/
+> O endereço anterior do GitHub Pages redireciona automaticamente para a nova versão.
+
 Dashboard web estático para acompanhamento executivo e analítico da produtividade de descarga. O projeto lê a planilha operacional diretamente no navegador, recalcula os indicadores e permite exportar a operação selecionada em PDF.
 
 ## Como usar
